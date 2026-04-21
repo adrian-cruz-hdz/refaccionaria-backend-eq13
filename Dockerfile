@@ -1,11 +1,16 @@
-# Etapa 1: Construcción (Descarga dependencias y compila tu código)
-FROM maven:3.9.6-eclipse-temurin-23 AS build
+# Etapa 1: Construcción 
+FROM eclipse-temurin:23-jdk AS build
 WORKDIR /app
-COPY pom.xml .
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+# Limpiamos los saltos de línea de Windows (CRLF a LF) para que Linux no se queje
+RUN sed -i 's/\r$//' mvnw
+RUN chmod +x mvnw
 COPY src ./src
-RUN mvn clean package -DskipTests
+# Usamos tu propio wrapper para compilar
+RUN ./mvnw clean package -DskipTests
 
-# Etapa 2: Ejecución (Crea un servidor súper ligero solo para correr tu app)
+# Etapa 2: Ejecución 
 FROM eclipse-temurin:23-jdk
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
