@@ -120,12 +120,4 @@ public class ProductoControlador {
 
         return ResponseEntity.ok(respuesta);
     }
-
-    // ==========================================================
-    // 4. MÉTODOS CRUD ESTÁNDAR DE ADMINISTRACIÓN (Mantenlos si los tienes)
-    // ==========================================================
-    // Ejemplo:
-    // @PostMapping
-    // public ResponseEntity<Producto> guardarProducto(@RequestBody Producto producto) { ... }
-    
 }
