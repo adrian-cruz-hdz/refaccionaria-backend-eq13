@@ -120,4 +120,30 @@ public class ProductoControlador {
 
         return ResponseEntity.ok(respuesta);
     }
+    
+    // ==========================================================
+    // INGRESAR STOCK AUTOMÁTICO (Para Préstamos de otras sucursales)
+    // ==========================================================
+    @PutMapping("/{id}/sumar-stock")
+    public ResponseEntity<?> sumarStockProducto(
+            @PathVariable String id, 
+            @RequestBody Map<String, Integer> request) {
+        
+        Optional<Producto> productoOpt = productoRepository.findById(id);
+        
+        if (!productoOpt.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Producto no encontrado.");
+        }
+
+        Producto producto = productoOpt.get();
+        
+        // Obtenemos la cantidad a sumar que manda el Front-end
+        int cantidadASumar = request.getOrDefault("cantidad", 0);
+        
+        // Hacemos la suma matemática y guardamos en base de datos
+        producto.setStock(producto.getStock() + cantidadASumar);
+        productoRepository.save(producto);
+        
+        return ResponseEntity.ok("Stock actualizado correctamente.");
+    }
 }
