@@ -72,9 +72,8 @@ public class PrestamoControlador {
         nuevoPrestamo.setCantidad(request.getCantidad());
         nuevoPrestamo.setEstado("PENDIENTE"); 
 
-        prestamoRepositorio.save(nuevoPrestamo);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body("Solicitud de préstamo registrada con éxito.");
+        Prestamo prestamoGuardado = prestamoRepositorio.save(nuevoPrestamo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(prestamoGuardado);
     }
 
     // ==========================================================
@@ -123,5 +122,28 @@ public class PrestamoControlador {
         prestamoRepositorio.save(prestamo);
 
         return ResponseEntity.ok("Préstamo actualizado exitosamente a: " + nuevoEstado);
+    }
+
+    // ==========================================================
+    // 4. CONSULTAR ESTADO DEL PRÉSTAMO (Para la otra sucursal)
+    // ==========================================================
+    @GetMapping("/{id}")
+    public ResponseEntity<?> consultarEstadoPrestamo(
+            @RequestHeader(value = "X-API-KEY", required = false) String apiKey,
+            @PathVariable Integer id) {
+            
+        // Validación de seguridad opcional pero recomendada
+        if (apiKey == null || apiKey.trim().isEmpty() || !SUCURSALES_AUTORIZADAS.containsKey(apiKey)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Acceso denegado: API KEY inválida o ausente.");
+        }
+
+        Optional<Prestamo> prestamoOpt = prestamoRepositorio.findById(id);
+
+        if (!prestamoOpt.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Préstamo no encontrado.");
+        }
+
+        return ResponseEntity.ok(prestamoOpt.get());
     }
 }
