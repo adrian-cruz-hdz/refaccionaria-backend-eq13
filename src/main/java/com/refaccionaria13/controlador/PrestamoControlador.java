@@ -5,7 +5,6 @@ import com.refaccionaria13.modelo.Producto;
 import com.refaccionaria13.repositorio.PrestamoRepositorio;
 import com.refaccionaria13.repositorio.ProductoRepositorio;
 import com.refaccionaria13.dto.PrestamoRequestDTO;
-import com.refaccionaria13.dto.ActualizarEstadoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
