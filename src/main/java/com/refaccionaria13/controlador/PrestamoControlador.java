@@ -168,34 +168,4 @@ public class PrestamoControlador {
         return ResponseEntity.ok(prestamoOpt.get());
     }
 
-    // =========================================================
-    // RESTAR STOCK (Para cuando pagas una deuda)
-    // =========================================================
-    @PutMapping("/{id}/restar-stock")
-    public ResponseEntity<?> restarStock(
-            @PathVariable String id, // Revisa si tu ID es String o Integer
-            @RequestBody Map<String, Integer> request) {
-        
-        Optional<Producto> productoOpt = productoRepositorio.findById(id);
-        
-        if (!productoOpt.isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Producto no encontrado."));
-        }
-
-        Producto producto = productoOpt.get();
-        Integer cantidadARestar = request.get("cantidad");
-
-        if (cantidadARestar == null || cantidadARestar <= 0) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Cantidad inválida."));
-        }
-
-        if (producto.getStock() < cantidadARestar) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Stock insuficiente para prestar."));
-        }
-
-        producto.setStock(producto.getStock() - cantidadARestar);
-        productoRepositorio.save(producto);
-        
-        return ResponseEntity.ok(Map.of("mensaje", "Stock restado correctamente."));
-    }
 }
