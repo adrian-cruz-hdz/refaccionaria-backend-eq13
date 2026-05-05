@@ -90,7 +90,7 @@ public class PrestamoControlador {
     @PutMapping("/{id}/estado")
     public ResponseEntity<?> actualizarEstadoPrestamo(
             @PathVariable Integer id, 
-            @RequestBody ActualizarEstadoDTO dto) {
+            @RequestBody Map<String, String> request) {
 
         Optional<Prestamo> prestamoOpt = prestamoRepositorio.findById(id);
 
@@ -99,29 +99,36 @@ public class PrestamoControlador {
         }
 
         Prestamo prestamo = prestamoOpt.get();
-        String estadoActual = prestamo.getEstado();
-        String nuevoEstado = dto.getNuevoEstado().toUpperCase();
+        String nuevoEstado = request.get("estado");
+        
+        // 1. Actualizamos el texto del estado
+        prestamo.setEstado(nuevoEstado);
 
-        if (!estadoActual.equals("PENDIENTE")) {
-            return ResponseEntity.badRequest().body("Este préstamo ya fue procesado (" + estadoActual + ").");
-        }
-
-        if (nuevoEstado.equals("ACTIVO")) {
+        // =========================================================
+        // 2. LA LÓGICA MATEMÁTICA: Si el estado es "COMPLETADO", sumamos
+        // =========================================================
+        if ("COMPLETADO".equalsIgnoreCase(nuevoEstado)) {
+            
+            // Buscamos el producto exacto que prestamos
+            // OJO: Cambia "getIdProducto()" por el nombre real de tu variable (ej. getSku())
             Optional<Producto> productoOpt = productoRepositorio.findById(prestamo.getIdProducto());
             
-            if (!productoOpt.isPresent() || productoOpt.get().getStock() < prestamo.getCantidad()) {
-                return ResponseEntity.badRequest().body("Error: Producto inexistente o stock insuficiente.");
+            if (productoOpt.isPresent()) {
+                Producto producto = productoOpt.get();
+                
+                // Sumamos la cantidad prestada de vuelta al stock actual
+                // OJO: Cambia "getCantidad()" por el nombre real de tu variable
+                producto.setStock(producto.getStock() + prestamo.getCantidad());
+                
+                // Guardamos el producto con su nuevo stock
+                productoRepositorio.save(producto);
             }
-
-            Producto producto = productoOpt.get();
-            producto.setStock(producto.getStock() - prestamo.getCantidad());
-            productoRepositorio.save(producto); 
         }
 
-        prestamo.setEstado(nuevoEstado);
+        // 3. Guardamos el préstamo con su nuevo estado
         prestamoRepositorio.save(prestamo);
 
-        return ResponseEntity.ok("Préstamo actualizado exitosamente a: " + nuevoEstado);
+        return ResponseEntity.ok("Estado actualizado a " + nuevoEstado + ". Inventario ajustado si aplica.");
     }
 
     // ==========================================================
