@@ -167,4 +167,39 @@ public class PrestamoControlador {
 
         return ResponseEntity.ok(prestamoOpt.get());
     }
+
+    // =========================================================
+    // RESTAR STOCK (Para cuando apruebas un préstamo)
+    // =========================================================
+    @PutMapping("/{id}/restar-stock")
+    public ResponseEntity<?> restarStock(
+            @PathVariable String id, // Asumiendo que tu ID de producto es String (ej. SKU-01)
+            @RequestBody Map<String, Integer> request) {
+        
+        Optional<Producto> productoOpt = productoRepositorio.findById(id);
+        
+        if (!productoOpt.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{\"error\": \"Producto no encontrado.\"}");
+        }
+
+        Producto producto = productoOpt.get();
+        Integer cantidadARestar = request.get("cantidad");
+
+        if (cantidadARestar == null || cantidadARestar <= 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("{\"error\": \"Cantidad inválida.\"}");
+        }
+
+        // Validación de seguridad: Evitar stock negativo
+        if (producto.getStock() < cantidadARestar) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("{\"error\": \"Stock insuficiente para prestar.\"}");
+        }
+
+        // La matemática: Restamos el stock
+        producto.setStock(producto.getStock() - cantidadARestar);
+        
+        // Guardamos en la base de datos
+        productoRepositorio.save(producto);
+        
+        return ResponseEntity.ok("{\"mensaje\": \"Stock restado correctamente. Nuevo stock: " + producto.getStock() + "\"}");
+    }
 }
