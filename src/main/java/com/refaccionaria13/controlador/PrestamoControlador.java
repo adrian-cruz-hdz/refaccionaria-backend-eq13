@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -83,47 +84,65 @@ public class PrestamoControlador {
         return prestamoRepositorio.findBySucursalPrestamistaAndEstado("Equipo 13: GP PERUANOS REMASTER", "PENDIENTE");
     }
 
-    // ==========================================================
-    // 3. APROBAR O RECHAZAR EL PRÉSTAMO (El núcleo del sistema)
-    // ==========================================================
+    // =========================================================
+    // ENDPOINT BLINDADO PARA ACTUALIZAR ESTADO
+    // =========================================================
     @PutMapping("/{id}/estado")
     public ResponseEntity<?> actualizarEstadoPrestamo(
             @PathVariable Integer id, 
             @RequestBody Map<String, String> request) {
-
-        Optional<Prestamo> prestamoOpt = prestamoRepositorio.findById(id);
-
-        if (!prestamoOpt.isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Préstamo no encontrado.");
-        }
-
-        Prestamo prestamo = prestamoOpt.get();
-        String nuevoEstado = request.get("estado");
         
-        // 1. Actualizamos el texto del estado
-        prestamo.setEstado(nuevoEstado);
+        // Preparamos un JSON seguro para responder
+        Map<String, String> response = new HashMap<>();
+        
+        try {
+            Optional<Prestamo> prestamoOpt = prestamoRepositorio.findById(id);
 
-        // 2. LA LÓGICA MATEMÁTICA
-        String mensajeRespuesta = "Estado actualizado a " + nuevoEstado;
-
-        if ("COMPLETADO".equalsIgnoreCase(nuevoEstado)) {
-            Optional<Producto> productoOpt = productoRepositorio.findById(prestamo.getIdProducto());
-            
-            if (productoOpt.isPresent()) {
-                Producto producto = productoOpt.get();
-                producto.setStock(producto.getStock() + prestamo.getCantidad());
-                productoRepositorio.save(producto);
-                mensajeRespuesta += ". ¡ÉXITO! Inventario sumado correctamente.";
-            } else {
-                // Si entra aquí, ¡descubrimos al culpable!
-                mensajeRespuesta += ". ALERTA: No se sumó el stock porque el SKU '" + prestamo.getIdProducto() + "' no se encontró en la tabla de productos.";
+            if (!prestamoOpt.isPresent()) {
+                response.put("error", "Préstamo no encontrado en la base de datos.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
-        } else {
-            mensajeRespuesta += ". (No se sumó inventario porque la palabra no fue 'COMPLETADO').";
-        }
 
-        prestamoRepositorio.save(prestamo);
-        return ResponseEntity.ok(mensajeRespuesta);
+            Prestamo prestamo = prestamoOpt.get();
+            String nuevoEstado = request.get("estado");
+            
+            // FILTRO DE SEGURIDAD: Evita que el programa choque si el Front-end manda un dato vacío
+            if (nuevoEstado == null || nuevoEstado.trim().isEmpty()) {
+                response.put("error", "El Front-End no envió la variable 'estado' en el JSON.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+
+            // 1. Actualizamos el texto
+            prestamo.setEstado(nuevoEstado);
+            String mensajeExito = "Estado actualizado a " + nuevoEstado;
+
+            // 2. LA LÓGICA MATEMÁTICA
+            if ("COMPLETADO".equalsIgnoreCase(nuevoEstado)) {
+                // Revisa que los métodos get coincidan con tu código real
+                Optional<Producto> productoOpt = productoRepositorio.findById(prestamo.getIdProducto());
+                
+                if (productoOpt.isPresent()) {
+                    Producto producto = productoOpt.get();
+                    producto.setStock(producto.getStock() + prestamo.getCantidad());
+                    productoRepositorio.save(producto);
+                    mensajeExito += ". ¡Inventario sumado correctamente!";
+                } else {
+                    mensajeExito += ". ALERTA: No se sumó inventario porque no existe el SKU.";
+                }
+            }
+
+            // 3. Guardamos el cambio
+            prestamoRepositorio.save(prestamo);
+            response.put("mensaje", mensajeExito);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            // SI ALGO EXPLOTA, ESTO NOS DIRÁ EXACTAMENTE QUÉ FUE
+            e.printStackTrace(); 
+            response.put("error", "Choque interno en Java: " + e.toString());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
 
     // ==========================================================
