@@ -103,31 +103,27 @@ public class PrestamoControlador {
         // 1. Actualizamos el texto del estado
         prestamo.setEstado(nuevoEstado);
 
-        // =========================================================
-        // 2. LA LÓGICA MATEMÁTICA: Si el estado es "COMPLETADO", sumamos
-        // =========================================================
+        // 2. LA LÓGICA MATEMÁTICA
+        String mensajeRespuesta = "Estado actualizado a " + nuevoEstado;
+
         if ("COMPLETADO".equalsIgnoreCase(nuevoEstado)) {
-            
-            // Buscamos el producto exacto que prestamos
-            // OJO: Cambia "getIdProducto()" por el nombre real de tu variable (ej. getSku())
             Optional<Producto> productoOpt = productoRepositorio.findById(prestamo.getIdProducto());
             
             if (productoOpt.isPresent()) {
                 Producto producto = productoOpt.get();
-                
-                // Sumamos la cantidad prestada de vuelta al stock actual
-                // OJO: Cambia "getCantidad()" por el nombre real de tu variable
                 producto.setStock(producto.getStock() + prestamo.getCantidad());
-                
-                // Guardamos el producto con su nuevo stock
                 productoRepositorio.save(producto);
+                mensajeRespuesta += ". ¡ÉXITO! Inventario sumado correctamente.";
+            } else {
+                // Si entra aquí, ¡descubrimos al culpable!
+                mensajeRespuesta += ". ALERTA: No se sumó el stock porque el SKU '" + prestamo.getIdProducto() + "' no se encontró en la tabla de productos.";
             }
+        } else {
+            mensajeRespuesta += ". (No se sumó inventario porque la palabra no fue 'COMPLETADO').";
         }
 
-        // 3. Guardamos el préstamo con su nuevo estado
         prestamoRepositorio.save(prestamo);
-
-        return ResponseEntity.ok("Estado actualizado a " + nuevoEstado + ". Inventario ajustado si aplica.");
+        return ResponseEntity.ok(mensajeRespuesta);
     }
 
     // ==========================================================
